@@ -15,6 +15,12 @@ import (
 
 const (
 	xForwardedURI = "X-Forwarded-Uri"
+	xSSLIssuer = "X-SSL-Issuer"
+	xSSLClientCN = "X-SSL-Client-CN"
+	xSSLClientCert = "X-SSL-Client-Cert"
+	xSSLClientNotBefore = "X-SSL-Client-NotBefore"
+	xSSLClientNotAfter = "X-SSL-Client-NotAfter"
+	xSSLClientDNSAltNames = "X-SSL-Client-DNSAltNames"
 )
 
 // Forward the authentication to a external server
@@ -135,5 +141,24 @@ func writeHeader(req *http.Request, forwardReq *http.Request, trustForwardHeader
 		forwardReq.Header.Set(xForwardedURI, req.URL.RequestURI())
 	} else {
 		forwardReq.Header.Del(xForwardedURI)
+	}
+
+	if len(req.TLS.PeerCertificates) > 0 {
+		forwardReq.Header.Set(xSSLClientCert, "1")
+		if commonName := req.TLS.PeerCertificates[0].Subject.CommonName; commonName != "" {
+			forwardReq.Header.Set(xSSLClientCN, commonName)
+		}
+		if issuerCN := req.TLS.PeerCertificates[0].Issuer.CommonName; issuerCN != "" {
+			forwardReq.Header.Set(xSSLIssuer, issuerCN)
+		}
+		if notBefore := req.TLS.PeerCertificates[0].NotBefore.String(); notBefore != "" {
+			forwardReq.Header.Set(xSSLClientNotBefore, notBefore)
+		}
+		if notAfter := req.TLS.PeerCertificates[0].NotAfter.String(); notAfter != "" {
+			forwardReq.Header.Set(xSSLClientNotAfter, notAfter)
+		}
+		if dnsAltNames := strings.Join(req.TLS.PeerCertificates[0].DNSNames, ","); dnsAltNames != "" {
+			forwardReq.Header.Set(xSSLClientDNSAltNames, dnsAltNames)
+		}
 	}
 }
